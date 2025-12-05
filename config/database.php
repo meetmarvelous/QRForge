@@ -382,134 +382,6 @@ class QRDatabase {
      */
     private function getUserAgent() {
         return $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
-        ]);
-        
-        return $this->pdo->lastInsertId();
-    }
-    
-    /**
-     * Get style presets
-     */
-    public function getStylePresets() {
-        $sql = "SELECT * FROM style_presets ORDER BY name";
-        $stmt = $this->pdo->query($sql);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-    
-    /**
-     * Get default style preset
-     */
-    public function getDefaultStylePreset() {
-        $sql = "SELECT * FROM style_presets WHERE is_default = TRUE LIMIT 1";
-        $stmt = $this->pdo->query($sql);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-    
-    /**
-     * Cleanup old QR codes and related data
-     */
-    public function cleanupOldQRCodes($days_old = 30) {
-        try {
-            $this->pdo->beginTransaction();
-            
-            // Delete old QR codes
-            $sql1 = "DELETE FROM qr_codes WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)";
-            $stmt1 = $this->pdo->prepare($sql1);
-            $stmt1->execute([$days_old]);
-            $deleted_qr = $stmt1->rowCount();
-            
-            // Delete old batch jobs
-            $sql2 = "DELETE FROM batch_jobs WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)";
-            $stmt2 = $this->pdo->prepare($sql2);
-            $stmt2->execute([$days_old]);
-            $deleted_jobs = $stmt2->rowCount();
-            
-            // Delete old analytics
-            $sql3 = "DELETE FROM analytics WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)";
-            $stmt3 = $this->pdo->prepare($sql3);
-            $stmt3->execute([$days_old]);
-            $deleted_analytics = $stmt3->rowCount();
-            
-            $this->pdo->commit();
-            
-            return [
-                'qr_codes' => $deleted_qr,
-                'batch_jobs' => $deleted_jobs,
-                'analytics' => $deleted_analytics,
-                'total' => $deleted_qr + $deleted_jobs + $deleted_analytics
-            ];
-        } catch (Exception $e) {
-            $this->pdo->rollBack();
-            throw $e;
-        }
-    }
-    
-    /**
-     * Get QR code statistics
-     */
-    public function getQRStatistics($days = 30) {
-        $sql = "SELECT 
-                DATE(created_at) as date,
-                data_type,
-                COUNT(*) as total_generated,
-                SUM(access_count) as total_accessed,
-                AVG(size) as avg_size,
-                format,
-                template
-                FROM qr_codes 
-                WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-                GROUP BY DATE(created_at), data_type, format, template
-                ORDER BY date DESC";
-        
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$days]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-    
-    /**
-     * Get batch job statistics
-     */
-    public function getBatchStatistics($days = 30) {
-        $sql = "SELECT 
-                DATE(created_at) as date,
-                status,
-                COUNT(*) as total_jobs,
-                SUM(total_items) as total_items_processed,
-                AVG(processed_items) as avg_items_per_job,
-                AVG(TIMESTAMPDIFF(SECOND, started_at, completed_at)) as avg_processing_time
-                FROM batch_jobs 
-                WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-                GROUP BY DATE(created_at), status
-                ORDER BY date DESC";
-        
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$days]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-    
-    /**
-     * Helper function to get client IP address
-     */
-    private function getClientIP() {
-        $ip_keys = ['HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'];
-        foreach ($ip_keys as $key) {
-            if (array_key_exists($key, $_SERVER) === true) {
-                foreach (explode(',', $_SERVER[$key]) as $ip) {
-                    $ip = trim($ip);
-                    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false) {
-                        return $ip;
-                    }
-                }
-            }
-        }
-        return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-    }
-    
-    /**
-     * Helper function to get user agent
-     */
-    private function getUserAgent() {
-        return $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
     }
     
     /**
@@ -544,6 +416,7 @@ class QRDatabase {
         $stmt = $this->pdo->query($sql);
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
+
     /**
      * Log admin action
      */
@@ -583,4 +456,3 @@ class QRDatabase {
     }
 }
 ?>
-```

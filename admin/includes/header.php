@@ -307,8 +307,7 @@
             <a href="logs.php" class="nav-link">Logs</a>
             <a href="cache.php" class="nav-link">Cache</a>
             <a href="../" target="_blank" class="nav-link">View Site</a>
-            <a href="auth.php?logout=1" class="nav-link logout">Logout</a>
+            <a href="auth.php?action=logout" class="nav-link logout">Logout</a>
         </div>
     </nav>
     <div class="container">
-```
