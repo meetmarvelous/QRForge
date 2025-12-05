@@ -25,6 +25,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     if ($username === ADMIN_USER && $password === ADMIN_PASS) {
         $_SESSION['admin_logged_in'] = true;
+        
+        // Log login
+        require_once '../config/database_factory.php';
+        $db = DatabaseFactory::getInstance()->getDatabase();
+        $db->logAdminAction('login', 'Admin logged in successfully');
+        
         header('Location: index.php');
         exit();
     } else {

@@ -4,19 +4,6 @@ requireLogin();
 
 // Include database factory
 require_once '../config/database_factory.php';
-$db = DatabaseFactory::getInstance()->getDatabase();
-
-// Handle Cleanup Action
-$message = '';
-if (isset($_POST['action']) && $_POST['action'] === 'cleanup') {
-    require_once '../scripts/cleanup.php';
-    $message = "Cleanup triggered successfully.";
-}
-
-// Get Stats
-$stats = DatabaseFactory::getInstance()->getStatistics();
-$qr_stats = $stats['qr_statistics'] ?? [];
-$total_qr = 0;
 foreach ($qr_stats as $stat) {
     $total_qr += $stat['total_generated'];
 }

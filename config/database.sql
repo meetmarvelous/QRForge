@@ -164,3 +164,13 @@ DELIMITER ;
 -- Display success message
 SELECT 'QRForge database setup completed successfully!' as message;
 SHOW TABLES FROM qrforge;
+
+-- Admin Logs Table
+CREATE TABLE IF NOT EXISTS admin_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    action VARCHAR(50) NOT NULL,
+    details TEXT,
+    ip_address VARCHAR(45),
+    user_agent VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
