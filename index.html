@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRForge - Premium QR Code Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/splitting@1.0.6/dist/splitting.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/splitting@1.0.6/dist/splitting.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary-indigo: #4F46E5;
+            --primary-pink: #EC4899;
+            --dark-bg: #0F172A;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --glass-border: rgba(255, 255, 255, 0.3);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #F3F4F6;
+            min-height: 100vh;
+            color: #1F2937;
+            overflow-x: hidden;
+        }
+
+        .font-heading {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, var(--primary-indigo), var(--primary-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, var(--primary-indigo), var(--primary-pink));
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
+        }
+
+        .qr-preview {
+            background: white;
+            border: 2px solid #E5E7EB;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .qr-preview:hover {
+            border-color: var(--primary-indigo);
+            box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .input-field {
+            transition: all 0.2s ease;
+            border: 2px solid #E5E7EB;
+            background: #F9FAFB;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary-indigo);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+            outline: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-indigo), var(--primary-pink));
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4);
+        }
+
+        .btn-primary:hover::after {
+            opacity: 1;
+        }
+
+        .floating-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background:
+                radial-gradient(circle at 10% 20%, rgba(79, 70, 229, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.05) 0%, transparent 40%);
+        }
+
+        .nav-link {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--primary-indigo);
+        }
+
+        .nav-link.active {
+            color: var(--primary-indigo);
+            font-weight: 600;
+        }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--primary-indigo);
+            border-radius: 2px;
+        }
+
+        .qr-container {
+            min-height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #F9FAFB;
+            border-radius: 1rem;
+            border: 2px dashed #E5E7EB;
+        }
+
+        .loading-spinner {
+            border: 3px solid #E5E7EB;
+            border-top: 3px solid var(--primary-indigo);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .data-type-btn {
+            padding: 0.75rem 1rem;
+            border: 1px solid #E5E7EB;
+            background: white;
+            border-radius: 0.75rem;
+            transition: all 0.2s ease;
+            text-align: center;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #4B5563;
+        }
+
+        .data-type-btn:hover {
+            border-color: var(--primary-indigo);
+            color: var(--primary-indigo);
+            background: #F5F3FF;
+        }
+
+        .data-type-btn.active {
+            border-color: transparent;
+            background: linear-gradient(135deg, var(--primary-indigo), var(--primary-pink));
+            color: white;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+        }
+
+        .color-picker {
+            width: 48px;
+            height: 48px;
+            border: 2px solid #E5E7EB;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 2px;
+            background: white;
+        }
+
+        .color-picker:hover {
+            transform: scale(1.05);
+            border-color: var(--primary-indigo);
+        }
+
+        .size-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: #E5E7EB;
+            outline: none;
+        }
+
+        .size-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary-indigo);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+        }
+
+        .size-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 0 6px rgba(79, 70, 229, 0.1);
+        }
+
+        .social-icon {
+            transition: all 0.3s ease;
+        }
+
+        .social-icon:hover {
+            transform: translateY(-3px);
+            color: var(--primary-indigo);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="floating-bg"></div>
+
+    <!-- Navigation -->
+    <nav class="glass-card rounded-none border-0 border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl gradient-bg flex items-center justify-center text-white shadow-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z">
+                            </path>
+                        </svg>
+                    </div>
+                    <span class="text-xl font-bold font-heading text-gray-900">QRForge</span>
+                </div>
+                <div class="flex space-x-8">
+                    <a href="index.html" class="nav-link active text-gray-600 font-medium">Generator</a>
+                    <a href="batch.html" class="nav-link text-gray-600 font-medium">Batch Process</a>
+                    <a href="customize.html" class="nav-link text-gray-600 font-medium">Customize</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="py-16 px-4">
+        <div class="max-w-4xl mx-auto text-center">
+            <h1 class="font-heading text-5xl md:text-7xl font-bold mb-6 fade-in leading-tight">
+                Create <span class="gradient-text">Premium</span> QR Codes
+            </h1>
+            <p class="text-xl text-gray-500 mb-10 fade-in max-w-2xl mx-auto" style="animation-delay: 0.2s">
+                Generate high-quality, customizable QR codes instantly. Professional tools for modern needs.
+            </p>
+            <div class="inline-flex items-center space-x-2 text-sm text-gray-500 fade-in bg-white px-4 py-2 rounded-full shadow-sm border border-gray-100"
+                style="animation-delay: 0.4s">
+                <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                <span>Generated today:</span>
+                <span id="generation-counter" class="font-bold text-indigo-600">1,247</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Generator Interface -->
+    <section class="py-8 px-4 pb-24">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+                <!-- Left Panel - Input Controls -->
+                <div class="lg:col-span-4">
+                    <div class="glass-card rounded-2xl p-6 fade-in h-full" style="animation-delay: 0.6s">
+                        <div class="flex items-center space-x-2 mb-6">
+                            <div
+                                class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h2 class="text-xl font-bold font-heading text-gray-800">Content</h2>
+                        </div>
+
+                        <!-- Data Type Selector -->
+                        <div class="mb-8">
+                            <label
+                                class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Type</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button class="data-type-btn active" data-type="url">URL</button>
+                                <button class="data-type-btn" data-type="text">Text</button>
+                                <button class="data-type-btn" data-type="email">Email</button>
+                                <button class="data-type-btn" data-type="phone">Phone</button>
+                                <button class="data-type-btn" data-type="wifi">WiFi</button>
+                                <button class="data-type-btn" data-type="sms">SMS</button>
+                            </div>
+                        </div>
+
+                        <!-- Dynamic Input Forms -->
+                        <div id="input-forms">
+                            <!-- URL Form -->
+                            <div id="url-form" class="input-form active">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Website URL</label>
+                                <input type="url" id="url-input" class="input-field w-full px-4 py-3 rounded-xl"
+                                    placeholder="https://example.com" value="https://example.com">
+                            </div>
+
+                            <!-- Text Form -->
+                            <div id="text-form" class="input-form hidden">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Text Content</label>
+                                <textarea id="text-input"
+                                    class="input-field w-full px-4 py-3 rounded-xl h-32 resize-none"
+                                    placeholder="Enter your text here..."></textarea>
+                            </div>
+
+                            <!-- Email Form -->
+                            <div id="email-form" class="input-form hidden space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                                    <input type="email" id="email-input" class="input-field w-full px-4 py-3 rounded-xl"
+                                        placeholder="user@example.com">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+                                    <input type="text" id="email-subject"
+                                        class="input-field w-full px-4 py-3 rounded-xl" placeholder="Email subject">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                                    <textarea id="email-body"
+                                        class="input-field w-full px-4 py-3 rounded-xl h-24 resize-none"
+                                        placeholder="Email message content..."></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Phone Form -->
+                            <div id="phone-form" class="input-form hidden">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                                <input type="tel" id="phone-input" class="input-field w-full px-4 py-3 rounded-xl"
+                                    placeholder="+1234567890">
+                            </div>
+
+                            <!-- WiFi Form -->
+                            <div id="wifi-form" class="input-form hidden space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Network Name
+                                        (SSID)</label>
+                                    <input type="text" id="wifi-ssid" class="input-field w-full px-4 py-3 rounded-xl"
+                                        placeholder="MyWiFiNetwork">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                                    <input type="password" id="wifi-password"
+                                        class="input-field w-full px-4 py-3 rounded-xl" placeholder="WiFi password">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Security Type</label>
+                                    <select id="wifi-security" class="input-field w-full px-4 py-3 rounded-xl">
+                                        <option value="WPA">WPA/WPA2</option>
+                                        <option value="WEP">WEP</option>
+                                        <option value="nopass">Open Network</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- SMS Form -->
+                            <div id="sms-form" class="input-form hidden space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                                    <input type="tel" id="sms-phone" class="input-field w-full px-4 py-3 rounded-xl"
+                                        placeholder="+1234567890">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                                    <textarea id="sms-message"
+                                        class="input-field w-full px-4 py-3 rounded-xl h-24 resize-none"
+                                        placeholder="SMS message content..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Center Panel - QR Code Preview -->
+                <div class="lg:col-span-4">
+                    <div class="glass-card rounded-2xl p-6 fade-in h-full flex flex-col" style="animation-delay: 0.8s">
+                        <div class="flex items-center space-x-2 mb-6">
+                            <div class="w-8 h-8 rounded-lg bg-pink-50 flex items-center justify-center text-pink-500">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h2 class="text-xl font-bold font-heading text-gray-800">Preview</h2>
+                        </div>
+
+                        <div class="qr-container flex-grow mb-6 relative overflow-hidden group">
+                            <div
+                                class="absolute inset-0 bg-gray-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                            </div>
+                            <div id="qr-preview" class="qr-preview rounded-xl p-6 relative z-10">
+                                <img id="qr-image" src="" alt="QR Code" class="max-w-full max-h-full shadow-sm"
+                                    style="display: none;">
+                                <div id="qr-placeholder" class="text-center text-gray-400">
+                                    <div
+                                        class="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-xl flex items-center justify-center">
+                                        <svg class="w-10 h-10 text-gray-300" fill="currentColor" viewBox="0 0 24 24">
+                                            <path
+                                                d="M3 3h18v18H3V3zm2 2v14h14V5H5zm2 2h2v2H7V7zm4 0h2v2h-2V7zm4 0h2v2h-2V7zM7 11h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2zM7 15h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z" />
+                                        </svg>
+                                    </div>
+                                    <p class="text-sm font-medium">Enter data to generate</p>
+                                </div>
+                                <div id="qr-loading" class="loading-spinner mx-auto" style="display: none;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Size Control -->
+                        <div>
+                            <div class="flex justify-between mb-3">
+                                <label class="text-sm font-medium text-gray-700">Size</label>
+                                <span class="text-sm font-bold text-indigo-600"><span
+                                        id="size-value">200</span>px</span>
+                            </div>
+                            <input type="range" id="size-slider" class="size-slider w-full" min="100" max="500"
+                                value="200" step="10">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel - Customization & Download -->
+                <div class="lg:col-span-4">
+                    <div class="glass-card rounded-2xl p-6 fade-in h-full" style="animation-delay: 1.0s">
+                        <div class="flex items-center space-x-2 mb-6">
+                            <div
+                                class="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h2 class="text-xl font-bold font-heading text-gray-800">Style & Export</h2>
+                        </div>
+
+                        <!-- Color Controls -->
+                        <div class="mb-8">
+                            <label
+                                class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Colors</label>
+                            <div class="flex items-center space-x-6">
+                                <div class="text-center">
+                                    <input type="color" id="fg-color" class="color-picker" value="#000000">
+                                    <label class="block text-xs text-gray-500 mt-2 font-medium">Foreground</label>
+                                </div>
+                                <div class="text-center">
+                                    <input type="color" id="bg-color" class="color-picker" value="#ffffff">
+                                    <label class="block text-xs text-gray-500 mt-2 font-medium">Background</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Format Selection -->
+                        <div class="mb-8">
+                            <label
+                                class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Format</label>
+                            <div class="relative">
+                                <select id="format-select"
+                                    class="input-field w-full px-4 py-3 rounded-xl appearance-none cursor-pointer">
+                                    <option value="png">PNG Image</option>
+                                    <option value="svg">SVG Vector</option>
+                                    <option value="jpeg">JPEG Image</option>
+                                </select>
+                                <div
+                                    class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Download Button -->
+                        <button id="download-btn"
+                            class="btn-primary w-full py-4 px-6 rounded-xl text-white font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+                            disabled>
+                            <span id="download-text">Download QR Code</span>
+                            <span id="download-loading" style="display: none;">
+                                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline"
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                    </path>
+                                </svg>
+                                Generating...
+                            </span>
+                        </button>
+
+                        <!-- Quick Actions -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <button id="copy-link-btn" data-action="copy-link"
+                                class="py-3 px-4 border border-gray-200 rounded-xl text-gray-600 font-medium hover:border-indigo-500 hover:text-indigo-600 transition-colors bg-white"
+                                style="display: none;">
+                                Copy Link
+                            </button>
+                            <button id="reset-btn" data-action="reset"
+                                class="py-3 px-4 border border-gray-200 rounded-xl text-gray-600 font-medium hover:border-red-400 hover:text-red-500 transition-colors bg-white col-span-2">
+                                Reset Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-auto">
+        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-6 md:mb-0 text-center md:text-left">
+                    <div class="flex items-center justify-center md:justify-start space-x-2 mb-2">
+                        <div class="w-8 h-8 rounded-lg gradient-bg flex items-center justify-center text-white">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z">
+                                </path>
+                            </svg>
+                        </div>
+                        <span class="text-lg font-bold font-heading text-gray-900">QRForge</span>
+                    </div>
+                    <p class="text-gray-500 text-sm">Premium QR Code Generation Suite</p>
+                </div>
+
+                <div class="flex flex-col items-center md:items-end">
+                    <p class="text-gray-600 font-medium mb-4">Developed by Marvelous</p>
+                    <div class="flex space-x-6">
+                        <a href="https://github.com/meetmarvelous" target="_blank"
+                            class="social-icon text-gray-400 hover:text-gray-900">
+                            <span class="sr-only">GitHub</span>
+                            <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path fill-rule="evenodd"
+                                    d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </a>
+                        <a href="https://linkedin.com/in/meetmarvelous" target="_blank"
+                            class="social-icon text-gray-400 hover:text-blue-600">
+                            <span class="sr-only">LinkedIn</span>
+                            <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path fill-rule="evenodd"
+                                    d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </a>
+                        <a href="https://bio.link/meetmarvelous" target="_blank"
+                            class="social-icon text-gray-400 hover:text-pink-500">
+                            <span class="sr-only">Bio.link</span>
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="main.js"></script>
+</body>
+
+</html>

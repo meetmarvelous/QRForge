@@ -1,0 +1,163 @@
+QRForge Database Setup Instructions
+====================================
+
+Database Configuration for XAMPP
+--------------------------------
+
+Application Database Name: qrforge
+Default XAMPP Credentials:
+- Host: localhost
+- Username: root
+- Password: (empty/blank)
+- Port: 3306
+
+SETUP INSTRUCTIONS:
+==================
+
+1. Start XAMPP Control Panel
+   - Start Apache and MySQL services
+
+2. Access phpMyAdmin
+   - Open browser and go to: http://localhost/phpmyadmin
+   - Login with username: root, password: (leave empty)
+
+3. Create Database
+   - Click "Databases" tab
+   - Enter database name: qrforge
+   - Click "Create"
+
+4. Import Database Schema
+   - Click on the "qrforge" database
+   - Click "Import" tab
+   - Click "Choose File" and select: database.sql
+   - Click "Go" to import
+
+5. Verify Installation
+   - You should see 6 tables created:
+     - qr_codes
+     - user_settings
+     - batch_jobs
+     - analytics
+     - style_presets
+   - Plus 2 views and 1 stored procedure
+
+ALTERNATIVE SETUP (Command Line):
+=================================
+
+1. Open XAMPP Shell or Command Prompt
+2. Navigate to project config directory:
+   cd /path/to/qrforge/config
+
+3. Import database using MySQL command:
+   mysql -u root -p < database.sql
+   (Enter password when prompted - leave empty for XAMPP default)
+
+DATABASE STRUCTURE:
+==================
+
+1. qr_codes
+   - Stores all generated QR code metadata
+   - Links to actual image files
+   - Tracks usage statistics
+
+2. user_settings
+   - User preferences and default settings
+   - Session-based user identification
+
+3. batch_jobs
+   - Batch processing job tracking
+   - Progress monitoring and status updates
+
+4. analytics
+   - Usage analytics and event tracking
+   - Performance metrics
+
+5. style_presets
+   - Predefined style templates
+   - Custom user style presets
+
+FEATURES IMPLEMENTED:
+====================
+
+1. File Storage with Metadata
+   - QR codes stored in cache/ directory
+   - Database tracks all file metadata
+   - Automatic cleanup capabilities
+
+2. Basic Cleanup System
+   - Stored procedure: cleanup_old_qr_codes(days)
+   - Removes QR codes older than specified days
+   - Cleans up related batch jobs and analytics
+
+3. Simple JSON/SQLite Alternative
+   - Can be configured to use SQLite for simpler setups
+   - JSON file storage option for minimal deployments
+
+4. Metadata Tracking
+   - Creation time, access count, IP address
+   - User agent tracking for analytics
+   - Expiration date management
+
+CONFIGURATION IN PHP:
+===================
+
+The application connects using these default settings:
+- Host: localhost
+- Database: qrforge
+- Username: root
+- Password: (empty)
+- Port: 3306
+
+To change database settings, edit config/database.php
+
+SECURITY NOTES:
+==============
+
+1. Change default XAMPP password for production use
+2. Create dedicated database user for the application
+3. Set appropriate file permissions on cache directory
+4. Consider using environment variables for credentials
+
+TROUBLESHOOTING:
+===============
+
+1. "Access denied for user 'root'@'localhost'"
+   - Check MySQL is running in XAMPP
+   - Verify root password is empty (XAMPP default)
+
+2. "Unknown database 'qrforge'"
+   - Database not created, run CREATE DATABASE command
+
+3. "Table doesn't exist"
+   - Database schema not imported, run database.sql
+
+4. Permission errors
+   - Check file permissions on cache/ directory
+   - Ensure PHP has write access
+
+PERFORMANCE OPTIMIZATION:
+========================
+
+1. Add indexes on frequently queried columns
+2. Implement database connection pooling
+3. Use prepared statements for all queries
+4. Consider Redis for caching frequently accessed QR codes
+5. Implement database partitioning for large installations
+
+BACKUP STRATEGY:
+===============
+
+1. Regular database backups using mysqldump
+2. File system backup of cache/ directory
+3. Export user settings and presets
+4. Document custom configurations
+
+MONITORING:
+==========
+
+1. Monitor database size and growth
+2. Track QR code generation frequency
+3. Monitor cache directory disk usage
+4. Set up alerts for system errors
+
+This setup provides a complete database solution with all requested features while maintaining compatibility with XAMPP's default configuration.
