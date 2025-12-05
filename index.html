@@ -4,10 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRForge - Premium QR Code Generator</title>
+    <title>QRForge - Free QR Code Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
     <script src="https://unpkg.com/splitting@1.0.6/dist/splitting.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/splitting@1.0.6/dist/splitting.css">
     <link
@@ -28,6 +28,8 @@
             min-height: 100vh;
             color: #1F2937;
             overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         .font-heading {
@@ -55,7 +57,8 @@
         .qr-preview {
             background: white;
             border: 2px solid #E5E7EB;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 1.5rem;
+            transition: all 0.3s ease;
         }
 
         .qr-preview:hover {
@@ -279,11 +282,37 @@
                     </div>
                     <span class="text-xl font-bold font-heading text-gray-900">QRForge</span>
                 </div>
-                <div class="flex space-x-8">
+
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex space-x-8">
                     <a href="index.html" class="nav-link active text-gray-600 font-medium">Generator</a>
                     <a href="batch.html" class="nav-link text-gray-600 font-medium">Batch Process</a>
                     <a href="customize.html" class="nav-link text-gray-600 font-medium">Customize</a>
                 </div>
+
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-btn"
+                        class="text-gray-600 hover:text-gray-900 focus:outline-none p-2 rounded-md hover:bg-gray-100 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden border-t border-gray-200 bg-white/95 backdrop-blur-md">
+            <div class="px-4 pt-2 pb-4 space-y-1">
+                <a href="index.html"
+                    class="block px-3 py-2 rounded-lg text-base font-medium text-indigo-600 bg-indigo-50">Generator</a>
+                <a href="batch.html"
+                    class="block px-3 py-2 rounded-lg text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50">Batch
+                    Process</a>
+                <a href="customize.html"
+                    class="block px-3 py-2 rounded-lg text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50">Customize</a>
             </div>
         </div>
     </nav>
@@ -340,86 +369,80 @@
                             </div>
                         </div>
 
-                        <!-- Dynamic Input Forms -->
-                        <div id="input-forms">
-                            <!-- URL Form -->
-                            <div id="url-form" class="input-form active">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Website URL</label>
-                                <input type="url" id="url-input" class="input-field w-full px-4 py-3 rounded-xl"
-                                    placeholder="https://example.com" value="https://example.com">
-                            </div>
+                        <!-- URL Form -->
+                        <div id="url-form" class="input-form active">
+                            <input type="url" id="url-input" class="input-field w-full px-4 py-3 rounded-xl"
+                                placeholder="https://example.com">
+                        </div>
 
-                            <!-- Text Form -->
-                            <div id="text-form" class="input-form hidden">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Text Content</label>
-                                <textarea id="text-input"
-                                    class="input-field w-full px-4 py-3 rounded-xl h-32 resize-none"
-                                    placeholder="Enter your text here..."></textarea>
-                            </div>
+                        <!-- Text Form -->
+                        <div id="text-form" class="input-form hidden">
+                            <textarea id="text-input" class="input-field w-full px-4 py-3 rounded-xl h-32 resize-none"
+                                placeholder="Enter your text here..."></textarea>
+                        </div>
 
-                            <!-- Email Form -->
-                            <div id="email-form" class="input-form hidden space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                                    <input type="email" id="email-input" class="input-field w-full px-4 py-3 rounded-xl"
-                                        placeholder="user@example.com">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-                                    <input type="text" id="email-subject"
-                                        class="input-field w-full px-4 py-3 rounded-xl" placeholder="Email subject">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Message</label>
-                                    <textarea id="email-body"
-                                        class="input-field w-full px-4 py-3 rounded-xl h-24 resize-none"
-                                        placeholder="Email message content..."></textarea>
-                                </div>
+                        <!-- Email Form -->
+                        <div id="email-form" class="input-form hidden space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                                <input type="email" id="email-input" class="input-field w-full px-4 py-3 rounded-xl"
+                                    placeholder="user@example.com">
                             </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+                                <input type="text" id="email-subject" class="input-field w-full px-4 py-3 rounded-xl"
+                                    placeholder="Email subject">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                                <textarea id="email-body"
+                                    class="input-field w-full px-4 py-3 rounded-xl h-24 resize-none"
+                                    placeholder="Email message content..."></textarea>
+                            </div>
+                        </div>
 
-                            <!-- Phone Form -->
-                            <div id="phone-form" class="input-form hidden">
+                        <!-- Phone Form -->
+                        <div id="phone-form" class="input-form hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                            <input type="tel" id="phone-input" class="input-field w-full px-4 py-3 rounded-xl"
+                                placeholder="+1234567890">
+                        </div>
+
+                        <!-- WiFi Form -->
+                        <div id="wifi-form" class="input-form hidden space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Network Name
+                                    (SSID)</label>
+                                <input type="text" id="wifi-ssid" class="input-field w-full px-4 py-3 rounded-xl"
+                                    placeholder="MyWiFiNetwork">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                                <input type="password" id="wifi-password"
+                                    class="input-field w-full px-4 py-3 rounded-xl" placeholder="WiFi password">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Security Type</label>
+                                <select id="wifi-security" class="input-field w-full px-4 py-3 rounded-xl">
+                                    <option value="WPA">WPA/WPA2</option>
+                                    <option value="WEP">WEP</option>
+                                    <option value="nopass">Open Network</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- SMS Form -->
+                        <div id="sms-form" class="input-form hidden space-y-4">
+                            <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                                <input type="tel" id="phone-input" class="input-field w-full px-4 py-3 rounded-xl"
+                                <input type="tel" id="sms-phone" class="input-field w-full px-4 py-3 rounded-xl"
                                     placeholder="+1234567890">
                             </div>
-
-                            <!-- WiFi Form -->
-                            <div id="wifi-form" class="input-form hidden space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Network Name
-                                        (SSID)</label>
-                                    <input type="text" id="wifi-ssid" class="input-field w-full px-4 py-3 rounded-xl"
-                                        placeholder="MyWiFiNetwork">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                                    <input type="password" id="wifi-password"
-                                        class="input-field w-full px-4 py-3 rounded-xl" placeholder="WiFi password">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Security Type</label>
-                                    <select id="wifi-security" class="input-field w-full px-4 py-3 rounded-xl">
-                                        <option value="WPA">WPA/WPA2</option>
-                                        <option value="WEP">WEP</option>
-                                        <option value="nopass">Open Network</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- SMS Form -->
-                            <div id="sms-form" class="input-form hidden space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                                    <input type="tel" id="sms-phone" class="input-field w-full px-4 py-3 rounded-xl"
-                                        placeholder="+1234567890">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Message</label>
-                                    <textarea id="sms-message"
-                                        class="input-field w-full px-4 py-3 rounded-xl h-24 resize-none"
-                                        placeholder="SMS message content..."></textarea>
-                                </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                                <textarea id="sms-message"
+                                    class="input-field w-full px-4 py-3 rounded-xl h-24 resize-none"
+                                    placeholder="SMS message content..."></textarea>
                             </div>
                         </div>
                     </div>
@@ -536,7 +559,8 @@
                                 <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline"
                                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
-                                        stroke-width="4"></circle>
+                                        stroke-width="4">
+                                    </circle>
                                     <path class="opacity-75" fill="currentColor"
                                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
                                     </path>

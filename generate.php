@@ -4,8 +4,16 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
+// Suppress display of errors to prevent JSON corruption
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
+// Start output buffering to catch any stray output
+ob_start();
+
 // Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    ob_clean();
     http_response_code(200);
     exit();
 }
@@ -23,6 +31,7 @@ if (!file_exists($cache_dir)) {
 try {
     $db = DatabaseFactory::getInstance()->getDatabase();
 } catch (Exception $e) {
+    ob_clean();
     http_response_code(500);
     echo json_encode([
         'success' => false,
@@ -212,6 +221,9 @@ try {
         'processing_time' => $processing_time
     ]);
     
+    // Clear any buffered output
+    ob_clean();
+    
     // Return success response
     echo json_encode([
         'success' => true,
@@ -238,6 +250,7 @@ try {
     
 } catch (Exception $e) {
     // Return error response
+    ob_clean();
     http_response_code(400);
     echo json_encode([
         'success' => false,
