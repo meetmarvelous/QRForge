@@ -29,24 +29,30 @@ class QRForge {
     }
 
     init() {
-        this.initAnimations();
-        this.initEventListeners();
+        try {
+            this.initAnimations();
+            this.initEventListeners();
 
-        // Page-specific initialization
-        switch (this.currentPage) {
-            case 'generator':
-                this.initGenerator();
-                break;
-            case 'batch':
-                this.initBatch();
-                break;
-            case 'customize':
-                this.initCustomize();
-                break;
+            // Page-specific initialization
+            switch (this.currentPage) {
+                case 'generator':
+                    this.initGenerator();
+                    break;
+                case 'batch':
+                    this.initBatch();
+                    break;
+                case 'customize':
+                    this.initCustomize();
+                    break;
+            }
+
+            // Start counter animation
+            this.animateCounter();
+        } catch (error) {
+            console.error('Critical initialization error:', error);
+            document.body.innerHTML = '<div style="padding: 20px; color: red;"><h1>Critical Error</h1><p>' + error.message + '</p><pre>' + error.stack + '</pre></div>';
+            document.body.style.opacity = '1';
         }
-
-        // Start counter animation
-        this.animateCounter();
     }
 
     initAnimations() {
@@ -192,13 +198,34 @@ class QRForge {
             });
         });
 
-        // Add input event listeners for live preview
+        // Add input event listeners for live preview with typing indicator
         forms.forEach(form => {
             const inputs = form.querySelectorAll('input, textarea');
+            const activeType = form.id.replace('-form', '');
+            const typingIndicator = document.getElementById(activeType + '-typing');
+            let typingTimeout;
+
             inputs.forEach(input => {
-                input.addEventListener('input', this.debounce(() => {
-                    this.generateQR();
-                }, 2000));
+                input.addEventListener('input', () => {
+                    // Show typing indicator
+                    if (typingIndicator) {
+                        typingIndicator.classList.add('visible');
+                    }
+                    input.classList.add('typing');
+
+                    // Clear previous timeout
+                    clearTimeout(typingTimeout);
+
+                    // Set new timeout for generation
+                    typingTimeout = setTimeout(() => {
+                        // Hide typing indicator
+                        if (typingIndicator) {
+                            typingIndicator.classList.remove('visible');
+                        }
+                        input.classList.remove('typing');
+                        this.generateQR();
+                    }, 1500);
+                });
             });
         });
     }
@@ -416,7 +443,7 @@ class QRForge {
             case 'text':
                 return data.text || data.content || data.input || '';
             case 'email':
-                const email = data.email || data.input || '';
+                const email = data.input || data.address || data.email || '';
                 if (!email) return '';
                 let mailto = `mailto:${email}`;
                 const params = [];
@@ -629,11 +656,28 @@ class QRForge {
         this.batchData = [];
 
         lines.forEach((line, index) => {
-            const columns = line.split(',').map(col => col.trim().replace(/"/g, ''));
+            // improved CSV parsing for quoted fields
+            const columns = [];
+            let inQuotes = false;
+            let currentValue = '';
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    columns.push(currentValue.trim());
+                    currentValue = '';
+                } else {
+                    currentValue += char;
+                }
+            }
+            columns.push(currentValue.trim());
+
             if (columns[0]) { // Ensure first column has data
                 this.batchData.push({
-                    data: columns[0],
-                    label: columns[1] || '',
+                    data: columns[0].replace(/^"|"$/g, ''), // Remove surrounding quotes
+                    label: (columns[1] || '').replace(/^"|"$/g, ''),
                     index: index
                 });
             }
@@ -905,124 +949,462 @@ class QRForge {
                 this.showToast(`Processed ${completed} QR codes (${errors} failed)`, 'success');
             } else {
                 this.showToast('Failed to generate any QR codes', 'error');
+                this.initCustomizationControls();
+                this.updateCustomPreview();
             }
 
-        } catch (error) {
-            console.error('Batch processing error:', error);
-            this.showToast('Error during batch processing', 'error');
-        } finally {
-            // Reset state
-            if (processText) processText.style.display = 'inline';
-            if (processLoading) processLoading.style.display = 'none';
-            if (processBtn) processBtn.disabled = false;
-            if (progressStatus) progressStatus.textContent = 'Processing complete';
-        }
-    }
+            initCustomizationControls() {
+                // Bind inputs
+                const inputs = [
+                    'test-data',
+                    'custom-fg-color',
+                    'custom-bg-color',
+                    'custom-size',
+                    'custom-margin',
+                    'export-format',
+                    'logo-size',
+                    'logo-opacity'
+                ];
 
-    // Customization Page Functions
-    initCustomize() {
-        this.initCustomizationControls();
-        this.updateCustomPreview();
-    }
+                inputs.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.addEventListener('input', () => this.updateCustomPreview());
+                        el.addEventListener('change', () => this.updateCustomPreview());
+                    }
+                });
 
-    initCustomizationControls() {
-        const inputs = document.querySelectorAll('.custom-control');
-        inputs.forEach(input => {
-            input.addEventListener('change', () => {
-                this.updateCustomPreview();
-            });
-        });
-    }
+                // Bind export button
+                const exportBtn = document.getElementById('export-btn');
+                if (exportBtn) {
+                    exportBtn.addEventListener('click', () => this.downloadCustomQR());
+                }
 
-    async updateCustomPreview() {
-        const previewContainer = document.getElementById('custom-preview-container');
-        if (!previewContainer) return;
+                // Bind style options
+                document.querySelectorAll('.style-option').forEach(opt => {
+                    opt.addEventListener('click', (e) => {
+                        const group = e.target.parentElement;
+                        group.querySelectorAll('.style-option').forEach(o => o.classList.remove('active'));
+                        e.target.classList.add('active');
+                        this.updateCustomPreview();
+                    });
+                });
 
-        const settings = {
-            text: "https://example.com",
-            width: 300,
-            height: 300,
-            colorDark: document.getElementById('custom-fg')?.value || "#000000",
-            colorLight: document.getElementById('custom-bg')?.value || "#ffffff",
-            correctLevel: 'H'
-        };
+                // Bind template cards
+                document.querySelectorAll('.template-card').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        document.querySelectorAll('.template-card').forEach(c => c.classList.remove('active'));
+                        e.currentTarget.classList.add('active');
+                        this.applyTemplate(e.currentTarget.dataset.template);
+                    });
+                });
 
-        previewContainer.innerHTML = '';
+                // Bind color presets
+                document.querySelectorAll('.preset-color').forEach(preset => {
+                    preset.addEventListener('click', (e) => {
+                        const fg = e.target.dataset.fg;
+                        const bg = e.target.dataset.bg;
 
-        // Generate QR using qrcode-generator
-        const typeNumber = 0;
-        const qr = qrcode(typeNumber, settings.correctLevel);
-        qr.addData(settings.text);
-        qr.make();
+                        const fgInput = document.getElementById('custom-fg-color');
+                        const bgInput = document.getElementById('custom-bg-color');
 
-        const moduleCount = qr.getModuleCount();
-        const pixelSize = Math.max(2, Math.floor(settings.width / moduleCount));
-        const margin = 4;
-        const canvasSize = (moduleCount + 2 * margin) * pixelSize;
+                        if (fgInput) fgInput.value = fg;
+                        if (bgInput) bgInput.value = bg;
 
-        const canvas = document.createElement('canvas');
-        canvas.width = canvasSize;
-        canvas.height = canvasSize;
-        const ctx = canvas.getContext('2d');
+                        this.updateCustomPreview();
+                    });
+                });
 
-        // Fill background
-        ctx.fillStyle = settings.colorLight;
-        ctx.fillRect(0, 0, canvasSize, canvasSize);
+                // Bind logo upload
+                const uploadBtn = document.getElementById('upload-logo-btn');
+                const fileInput = document.getElementById('logo-file');
+                const removeLogoBtn = document.getElementById('remove-logo-btn');
 
-        // Draw modules
-        ctx.fillStyle = settings.colorDark;
-        for (let row = 0; row < moduleCount; row++) {
-            for (let col = 0; col < moduleCount; col++) {
-                if (qr.isDark(row, col)) {
-                    ctx.fillRect(
-                        (col + margin) * pixelSize,
-                        (row + margin) * pixelSize,
-                        pixelSize,
-                        pixelSize
-                    );
+                if (uploadBtn && fileInput) {
+                    uploadBtn.addEventListener('click', () => fileInput.click());
+                    fileInput.addEventListener('change', (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                this.logoImage = new Image();
+                                this.logoImage.onload = () => {
+                                    document.getElementById('logo-controls').style.display = 'block';
+                                    document.getElementById('logo-upload').style.display = 'none';
+                                    this.updateCustomPreview();
+                                };
+                                this.logoImage.src = e.target.result;
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    });
+                }
+
+                if (removeLogoBtn) {
+                    removeLogoBtn.addEventListener('click', () => {
+                        this.logoImage = null;
+                        document.getElementById('logo-controls').style.display = 'none';
+                        document.getElementById('logo-upload').style.display = 'block';
+                        if (fileInput) fileInput.value = '';
+                        this.updateCustomPreview();
+                    });
                 }
             }
+
+            applyTemplate(templateName) {
+                const templates = {
+                    classic: { fg: '#000000', bg: '#ffffff', dot: 'square', corner: 'square' },
+                    modern: { fg: '#4F46E5', bg: '#ffffff', dot: 'rounded', corner: 'circle' },
+                    elegant: { fg: '#1F2937', bg: '#F3F4F6', dot: 'circle', corner: 'square' },
+                    vibrant: { fg: '#EC4899', bg: '#ffffff', dot: 'square', corner: 'dot' }
+                };
+
+                const template = templates[templateName];
+                if (!template) return;
+
+                // Apply colors
+                const fgInput = document.getElementById('custom-fg-color');
+                const bgInput = document.getElementById('custom-bg-color');
+                if (fgInput) fgInput.value = template.fg;
+                if (bgInput) bgInput.value = template.bg;
+
+                // Apply styles
+                document.querySelectorAll('.style-option').forEach(opt => opt.classList.remove('active'));
+
+                const dotOpt = document.querySelector(`.style-option[data-style="${template.dot}"]`);
+                if (dotOpt) dotOpt.classList.add('active');
+
+                const cornerOpt = document.querySelector(`.style-option[data-corner="${template.corner}"]`);
+                if (cornerOpt) cornerOpt.classList.add('active');
+
+                this.updateCustomPreview();
+            }
+
+    async updateCustomPreview() {
+                const previewContainer = document.getElementById('custom-qr-preview');
+                if (!previewContainer) return;
+
+                const text = document.getElementById('test-data')?.value || "https://example.com";
+                const size = parseInt(document.getElementById('custom-size')?.value || 300);
+                const margin = parseInt(document.getElementById('custom-margin')?.value || 4);
+                const fgColor = document.getElementById('custom-fg-color')?.value || "#000000";
+                const bgColor = document.getElementById('custom-bg-color')?.value || "#ffffff";
+
+                // Update display values
+                const sizeDisplay = document.getElementById('size-display');
+                if (sizeDisplay) sizeDisplay.textContent = `${size}px`;
+
+                const marginDisplay = document.getElementById('margin-display');
+                if (marginDisplay) marginDisplay.textContent = `${margin}px`;
+
+                previewContainer.innerHTML = '';
+
+                try {
+                    // Generate QR using qrcode-generator
+                    const typeNumber = 0;
+                    const qr = qrcode(typeNumber, 'H');
+                    qr.addData(text);
+                    qr.make();
+
+                    const moduleCount = qr.getModuleCount();
+                    const pixelSize = Math.max(2, Math.floor(size / moduleCount));
+                    const canvasSize = (moduleCount + 2 * margin) * pixelSize;
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = canvasSize;
+                    canvas.height = canvasSize;
+                    const ctx = canvas.getContext('2d');
+
+                    // Fill background
+                    ctx.fillStyle = bgColor;
+                    ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+                    // Draw modules
+                    ctx.fillStyle = fgColor;
+
+                    // Get style settings
+                    const dotStyle = document.querySelector('.style-option[data-style].active')?.dataset.style || 'square';
+                    const cornerStyle = document.querySelector('.style-option[data-corner].active')?.dataset.corner || 'square';
+
+                    for (let row = 0; row < moduleCount; row++) {
+                        for (let col = 0; col < moduleCount; col++) {
+                            if (qr.isDark(row, col)) {
+                                const x = (col + margin) * pixelSize;
+                                const y = (row + margin) * pixelSize;
+
+                                if (dotStyle === 'circle') {
+                                    ctx.beginPath();
+                                    ctx.arc(x + pixelSize / 2, y + pixelSize / 2, pixelSize / 2, 0, Math.PI * 2);
+                                    ctx.fill();
+                                } else if (dotStyle === 'rounded') {
+                                    ctx.beginPath();
+                                    ctx.roundRect(x, y, pixelSize, pixelSize, pixelSize * 0.3);
+                                    ctx.fill();
+                                } else {
+                                    ctx.fillRect(x, y, pixelSize, pixelSize);
+                                }
+                            }
+                        }
+                    }
+
+                    // Draw logo if exists
+                    if (this.logoImage) {
+                        const logoSizePercent = parseInt(document.getElementById('logo-size')?.value || 20) / 100;
+                        const logoOpacity = parseInt(document.getElementById('logo-opacity')?.value || 100) / 100;
+
+                        const logoW = canvasSize * logoSizePercent;
+                        const logoH = (this.logoImage.height / this.logoImage.width) * logoW;
+                        const logoX = (canvasSize - logoW) / 2;
+                        const logoY = (canvasSize - logoH) / 2;
+
+                        ctx.globalAlpha = logoOpacity;
+                        ctx.drawImage(this.logoImage, logoX, logoY, logoW, logoH);
+                        ctx.globalAlpha = 1.0;
+                    }
+
+                    previewContainer.appendChild(canvas);
+                } catch (e) {
+                    console.error(e);
+                    previewContainer.innerHTML = '<div class="text-red-500 p-4">Error generating QR code: ' + e.message + '</div>';
+                }
+            }
+            downloadCustomQR() {
+                const canvas = document.querySelector('#custom-qr-preview canvas');
+                if (canvas) {
+                    const format = document.getElementById('export-format')?.value || 'png';
+                    const link = document.createElement('a');
+                    link.download = `custom-qr.${format}`;
+
+                    if (format === 'jpeg') {
+                        link.href = canvas.toDataURL('image/jpeg');
+                    } else {
+                        link.href = canvas.toDataURL('image/png');
+                    }
+
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    this.showToast('QR Code downloaded', 'success');
+                } else {
+                    this.showToast('No QR Code to download', 'error');
+                }
+            }
+
+            // Utility Functions
+            showToast(message, type = 'info') {
+                const container = document.getElementById('toast-container');
+                if (!container) return;
+
+                const toast = document.createElement('div');
+                toast.className = `toast toast-${type} fade-in`;
+                toast.textContent = message;
+
+                container.appendChild(toast);
+
+                // Remove after 3 seconds
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    if (bgInput) bgInput.value = bg;
+
+                    this.updateCustomPreview();
+                });
+            });
+
+            // Bind logo upload
+            const uploadBtn = document.getElementById('upload-logo-btn');
+            const fileInput = document.getElementById('logo-file');
+            const removeLogoBtn = document.getElementById('remove-logo-btn');
+
+            if (uploadBtn && fileInput) {
+                uploadBtn.addEventListener('click', () => fileInput.click());
+                fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            this.logoImage = new Image();
+                            this.logoImage.onload = () => {
+                                document.getElementById('logo-controls').style.display = 'block';
+                                document.getElementById('logo-upload').style.display = 'none';
+                                this.updateCustomPreview();
+                            };
+                            this.logoImage.src = e.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+
+            if (removeLogoBtn) {
+                removeLogoBtn.addEventListener('click', () => {
+                    this.logoImage = null;
+                    document.getElementById('logo-controls').style.display = 'none';
+                    document.getElementById('logo-upload').style.display = 'block';
+                    if (fileInput) fileInput.value = '';
+                    this.updateCustomPreview();
+                });
+            }
         }
 
-        // Add logo if present (not implemented in this simplified version but placeholder logic kept)
-        // ...
+            applyTemplate(templateName) {
+            const templates = {
+                classic: { fg: '#000000', bg: '#ffffff', dot: 'square', corner: 'square' },
+                modern: { fg: '#4F46E5', bg: '#ffffff', dot: 'rounded', corner: 'circle' },
+                elegant: { fg: '#1F2937', bg: '#F3F4F6', dot: 'circle', corner: 'square' },
+                vibrant: { fg: '#EC4899', bg: '#ffffff', dot: 'square', corner: 'dot' }
+            };
 
-        previewContainer.appendChild(canvas);
-    }
+            const template = templates[templateName];
+            if (!template) return;
 
-    downloadCustomQR() {
-        const canvas = document.querySelector('#custom-preview-container canvas');
-        if (canvas) {
-            const format = document.getElementById('custom-format')?.value || 'png';
-            const link = document.createElement('a');
-            link.download = `custom-qr.${format}`;
-            link.href = canvas.toDataURL(`image/${format}`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            // Apply colors
+            const fgInput = document.getElementById('custom-fg-color');
+            const bgInput = document.getElementById('custom-bg-color');
+            if (fgInput) fgInput.value = template.fg;
+            if (bgInput) bgInput.value = template.bg;
+
+            // Apply styles
+            document.querySelectorAll('.style-option').forEach(opt => opt.classList.remove('active'));
+
+            const dotOpt = document.querySelector(`.style-option[data-style="${template.dot}"]`);
+            if (dotOpt) dotOpt.classList.add('active');
+
+            const cornerOpt = document.querySelector(`.style-option[data-corner="${template.corner}"]`);
+            if (cornerOpt) cornerOpt.classList.add('active');
+
+            this.updateCustomPreview();
         }
-    }
 
-    // Utility Functions
-    showToast(message, type = 'info') {
-        const container = document.getElementById('toast-container');
-        if (!container) return;
+    async updateCustomPreview() {
+            const previewContainer = document.getElementById('custom-qr-preview');
+            if (!previewContainer) return;
 
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type} fade-in`;
-        toast.textContent = message;
+            const text = document.getElementById('test-data')?.value || "https://example.com";
+            const size = parseInt(document.getElementById('custom-size')?.value || 300);
+            const margin = parseInt(document.getElementById('custom-margin')?.value || 4);
+            const fgColor = document.getElementById('custom-fg-color')?.value || "#000000";
+            const bgColor = document.getElementById('custom-bg-color')?.value || "#ffffff";
 
-        container.appendChild(toast);
+            // Update display values
+            const sizeDisplay = document.getElementById('size-display');
+            if (sizeDisplay) sizeDisplay.textContent = `${size}px`;
 
-        // Remove after 3 seconds
-        setTimeout(() => {
-            toast.style.opacity = '0';
+            const marginDisplay = document.getElementById('margin-display');
+            if (marginDisplay) marginDisplay.textContent = `${margin}px`;
+
+            previewContainer.innerHTML = '';
+
+            try {
+                // Generate QR using qrcode-generator
+                const typeNumber = 0;
+                const qr = qrcode(typeNumber, 'H');
+                qr.addData(text);
+                qr.make();
+
+                const moduleCount = qr.getModuleCount();
+                const pixelSize = Math.max(2, Math.floor(size / moduleCount));
+                const canvasSize = (moduleCount + 2 * margin) * pixelSize;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = canvasSize;
+                canvas.height = canvasSize;
+                const ctx = canvas.getContext('2d');
+
+                // Fill background
+                ctx.fillStyle = bgColor;
+                ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+                // Draw modules
+                ctx.fillStyle = fgColor;
+
+                // Get style settings
+                const dotStyle = document.querySelector('.style-option[data-style].active')?.dataset.style || 'square';
+                const cornerStyle = document.querySelector('.style-option[data-corner].active')?.dataset.corner || 'square';
+
+                for (let row = 0; row < moduleCount; row++) {
+                    for (let col = 0; col < moduleCount; col++) {
+                        if (qr.isDark(row, col)) {
+                            const x = (col + margin) * pixelSize;
+                            const y = (row + margin) * pixelSize;
+
+                            if (dotStyle === 'circle') {
+                                ctx.beginPath();
+                                ctx.arc(x + pixelSize / 2, y + pixelSize / 2, pixelSize / 2, 0, Math.PI * 2);
+                                ctx.fill();
+                            } else if (dotStyle === 'rounded') {
+                                ctx.beginPath();
+                                ctx.roundRect(x, y, pixelSize, pixelSize, pixelSize * 0.3);
+                                ctx.fill();
+                            } else {
+                                ctx.fillRect(x, y, pixelSize, pixelSize);
+                            }
+                        }
+                    }
+                }
+
+                // Draw logo if exists
+                if (this.logoImage) {
+                    const logoSizePercent = parseInt(document.getElementById('logo-size')?.value || 20) / 100;
+                    const logoOpacity = parseInt(document.getElementById('logo-opacity')?.value || 100) / 100;
+
+                    const logoW = canvasSize * logoSizePercent;
+                    const logoH = (this.logoImage.height / this.logoImage.width) * logoW;
+                    const logoX = (canvasSize - logoW) / 2;
+                    const logoY = (canvasSize - logoH) / 2;
+
+                    ctx.globalAlpha = logoOpacity;
+                    ctx.drawImage(this.logoImage, logoX, logoY, logoW, logoH);
+                    ctx.globalAlpha = 1.0;
+                }
+
+                previewContainer.appendChild(canvas);
+            } catch (e) {
+                console.error(e);
+                previewContainer.innerHTML = '<div class="text-red-500 p-4">Error generating QR code: ' + e.message + '</div>';
+            }
+        }
+        downloadCustomQR() {
+            const canvas = document.querySelector('#custom-qr-preview canvas');
+            if (canvas) {
+                const format = document.getElementById('export-format')?.value || 'png';
+                const link = document.createElement('a');
+                link.download = `custom-qr.${format}`;
+
+                if (format === 'jpeg') {
+                    link.href = canvas.toDataURL('image/jpeg');
+                } else {
+                    link.href = canvas.toDataURL('image/png');
+                }
+
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                this.showToast('QR Code downloaded', 'success');
+            } else {
+                this.showToast('No QR Code to download', 'error');
+            }
+        }
+
+        // Utility Functions
+        showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type} fade-in`;
+            toast.textContent = message;
+
+            container.appendChild(toast);
+
+            // Remove after 3 seconds
             setTimeout(() => {
-                container.removeChild(toast);
-            }, 300);
-        }, 3000);
+                toast.style.opacity = '0';
+                setTimeout(() => {
+                    container.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
     }
-}
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {

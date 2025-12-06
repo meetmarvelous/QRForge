@@ -1,0 +1,4 @@
+data,label
+https://example.com/1,Item 1
+https://example.com/2,Item 2
+"https://example.com/3,with,commas",Item 3
